@@ -1,13 +1,13 @@
 # Golang
 
-## 书籍
+## 1.书籍
 
 [golang圣经](https://github.com/golang-china/gopl-zh)
 
 [effective go](https://golang.org/doc/effective_go.html)
 
 
-## 优质内容作者 & 专栏
+## 2.优质内容作者 & 专栏
 
 [go语言中文网](https://studygolang.com/)
 
@@ -18,14 +18,14 @@
 [golang 源码阅读之路](https://zhuanlan.zhihu.com/c_1010470599088594944)
 
 
-## golang 优质仓库
+## 3.Golang 优质仓库
 
 [awesome-go: A curated list of awesome Go frameworks, libraries and software](https://github.com/avelino/awesome-go)
 
 [go-patterns 设计模式](https://github.com/tmrts/go-patterns)
 
 
-## 文章
+## 4.文章
 
 ### 调度 & Goroutine
 
