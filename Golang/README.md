@@ -59,6 +59,8 @@
 
 ### 相关原理
 
+[深度解析 Go 语言中「切片」的三种特殊状态 - 「零切片」、「空切片」和「nil 切片」](https://juejin.im/post/5bea58df6fb9a049f153bca8)
+
 [golang interface原理](https://tiancaiamao.gitbooks.io/go-internals/content/zh/07.2.html)
 
 [golang derfer = 赋值指令 + CALL defer指令 + RET指令](http://www.zenlife.tk/golang-defer.md)
