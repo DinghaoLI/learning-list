@@ -26,10 +26,11 @@
 
 ## 3. Golang 优质仓库
 
-
 [awesome-go: A curated list of awesome Go frameworks, libraries and software](https://github.com/avelino/awesome-go)
 
 [go-patterns 设计模式](https://github.com/tmrts/go-patterns)
+
+[设计模式 Golang实现－《研磨设计模式》读书笔记](https://github.com/senghoo/golang-design-pattern)
 
 
 ## 4. Golang相关知识点、面试问题与相关文章
