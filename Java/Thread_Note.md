@@ -103,13 +103,12 @@ GC
 - 2、	改变条件
 - 3、	通知所有等待在对象的线程: notify/notifyAll
 
-notify和notifyAll应该用谁？应该尽量使用notifyAll，使用notify只会发送一个信号到同一对象上等待队列中的一个wait，并不一定是自己期望的那个wait，所以有可能发生信号丢失的的情况。
+notify和notifyAll应该用谁？应该尽量使用notifyAll，因为synchronized只是一个锁，如果在一个锁上有不同的线程做着不同的业务，使用notify只会发送一个信号到同一对象上等待队列中的一个wait，并不一定是自己期望的那个wait，所以有可能发生信号丢失的的情况。
 
 **相关文章**
 
-[sleep和wait的区别](https://www.zhihu.com/question/23328075/answer/665978836)
-
-[你知道wait/notify的这些知识点吗？](https://juejin.im/post/5da03850e51d4577f706198b)
+- [sleep和wait的区别](https://www.zhihu.com/question/23328075/answer/665978836)
+- [你知道wait/notify的这些知识点吗？](https://juejin.im/post/5da03850e51d4577f706198b)
 
 
 ### 等待超时模式实现一个连接池：
@@ -140,7 +139,7 @@ return result;
 
 # 2. 线程的并发工具类
 
-## Fork-Join 分而治之
+## 2.1 Fork-Join 分而治之
 
 ### 什么是分而治之
 
@@ -159,13 +158,13 @@ return result;
 - Fork/Join的同步用法同时演示返回结果值：统计整形数组中所有元素的和
 - Fork/Join的异步用法同时演示不要求返回值：遍历指定目录（含子目录）寻找指定类型文件
 
-### CountDownLatch
+## 2.2 CountDownLatch
 
 作用：是一组线程等待其他的线程完成工作以后在执行，加强版的join，使用await用来等待，countDown负责计数器的减一。
 
 例子：主线程需要等待三个子线程全部完成才能继续走：主线程声明countDownLatch(3)，然后调用await。子线程完成调用countDown让计数器减一，当扣除完毕（扣除数达到3次时），主线程从await的阻塞中恢复。
 
-### CyclicBarrier
+## 2.3 CyclicBarrier
 
 让一组线程达到某个屏障，被阻塞，一直到组内最后一个线程达到屏障时，屏障开放，所有被阻塞的线程会继续运行CyclicBarrier(int parties)
 CyclicBarrier(int parties, Runnable barrierAction)，屏障开放，barrierAction定义的任务会执行，任务执行后，各个线程中的await才返回。
@@ -174,15 +173,15 @@ CountDownLatch和CyclicBarrier辨析：
 - 1、countdownlatch放行由第三者控制，CyclicBarrier放行由一组线程本身控制，所以CyclicBarrier中的await到达约定数量前都会被阻塞，达到后一起放行。
 - 2、countdownlatch放行条件 >= 线程数，CyclicBarrier放行条件=线程数
 
-### Semaphore
+## 2.4 Semaphore
 
 控制同时访问某个特定资源的线程数量，用在流量控制
 
-### Exchange
+## 2.5 Exchange
 
 两个线程间的数据交换，用得比较少。第一个到达exchange时，会阻塞，等到第二个线程也到达exchange时，双方就交换对应的数据。
 
-### Callable、Future和FutureTask 
+## 2.6 Callable、Future和FutureTask 
 
 ![](./img/FuturTask.png)
 
@@ -193,18 +192,362 @@ CountDownLatch和CyclicBarrier辨析：
 	- 任务已经启动，cancel(true)，中断正在运行的任务，中断成功，返回true，cancel(false)，不会去中断已经运行的任务。Future.cancel(false) is only useful to avoid starting tasks that hadn't already been started.
 	- 任务已经结束，返回false
 
-**相关文章**
-[Use case for Future.cancel(false)?](https://stackoverflow.com/questions/3271564/use-case-for-future-cancelfalse)
+**相关文章：**
+
+- [Use case for Future.cancel(false)?](https://stackoverflow.com/questions/3271564/use-case-for-future-cancelfalse)
 
 使用场景：包含图片和文字的文档的处理：图片（云上），可以用future去取图片，主线程继续解析文字。
 
 
+# 3. 原子操作CAS 
+
+## 3.1 什么是原子操作？如何实现原子操作？ 
+
+原子操作是不可分割的，在执行完毕之前不会被任何其它任务或事件中断。
+
+synchronized类的原子操作是基于阻塞的锁的机制，特点：
+
+- 1. 被阻塞的线程优先级很高，
+- 2. 拿到锁的线程一直不释放锁怎么办？
+- 3. 大量的竞争，消耗cpu，同时带来死锁或者其他安全。
+
+### CAS的原理：
+
+CAS(Compare And Swap)，指令级别保证这是一个原子操作。有三个运算符CAS(V, A, B)：一个内存地址V，一个期望的值A，一个新值B。
+
+基本思路：如果地址V上的值和期望的值A相等，就给地址V赋给新值B，如果不是，不做任何操作，会进入循环（死循环，自旋）里不断的进行CAS操作。利用了现代处理器都支持的CAS的指令，循环这个指令，直到成功为止。
+
+
+### CAS存在的问题：
+
+- [ABA问题](https://www.zhihu.com/question/23281499)：A -> B -> A，地址上还是A，但是A的其他环境（例如：链表前后）变化，且程序无法感知，你大爷还是你大爷，但是你大妈已经不是你大妈了。可利用版本号解决: A1-B2-A3，虽然还是A，但是版本已经不是之前的版本了，程序可以感知到A的环境变化。
+- 开销问题：CAS操作长期不成功，cpu会不断的循环。 
+- 只能保证一个变量的原子操作：可把多个变量绑定成一个对象进行操作。
+
+Jdk中相关原子操作类的使用：
+AtomicMarkableReference -> 可返回内存有没有被动过。
+AtomicStampedReference -> 可返回内存被动过几次。
+上述两者可解决ABA问题。
+
+
+# 4. 显式锁和AQS 
+
+## 4.1 显式锁
+
+### Lock接口和synchronized的比较
+
+- synchronized：代码简洁, 但是获取锁的过程不可被中断，没有超时的机制，没有提供类似tryLock的机制，如果没有这三种要求就尽量使用synchronized，已经被优化的很不错了。
+- Lock：获取锁可以被中断，超时获取锁，尝试获取锁，读多写少用读写锁。
+- Lock.unlock一定要放在finally内部，保证异常试会释放资源。
+
+### 可重入锁ReentrantLock、所谓锁的公平和非公平
+
+- 可重入锁：若一个程序或子程序可以“在任意时刻被中断然后操作系统调度执行另外一段代码，这段代码又调用了该子程序不会出错”，则称其为可重入（reentrant或re-entrant）的。即当该子程序正在运行时，执行线程可以再次进入并执行它，仍然获得符合设计时预期的结果。与多线程并发执行的线程安全不同，可重入强调对单个线程执行时重新进入同一个子程序仍然是安全的。
+- **synchronized 是可重入锁！**
+- 如果在时间上，先对锁进行获取的请求，一定先被满足，这个锁就是公平的，不满足，就是非公平的。非公平的效率一般来讲更高，因为，为了保证获取锁的顺序可能会造成需要挂起额外的的线程，切换上下文的时间可能会增加。而插队的线程有几率充分利用其他线程阻塞唤醒的时间，从而效率更高。
+- ReentrantLock和synchronized关键字，都是排他锁，同一时刻只允许一个线程访问。
+
+### ReadWriteLock接口和读写锁ReentrantReadWriteLock
+
+读写锁：同一时刻允许多个读线程同时访问，但是写线程访问的时候，所有的读和写都被阻塞，**最适宜与读多写少的情况**。
+
+### Condition接口
+
+- 用Lock和Condition实现等待通知，await+signal类似于synchronized中wait+notify的作用。
+- 唤醒时尽量使用signal而不用signalAll，因为相较于synchronized而言，ReadWriteLock可以生成多个Condition，如果一个锁上有不同的线程做着不同的业务时可以生成多个Condition，只需要唤醒对应Condition等待的线程就可以了，并不用全题唤醒。
+
+## 4.2 AbstractQueuedSynchronizer深入分析 
+
+### LockSupport工具
+
+- 阻塞一个线程
+- 唤醒一个线程
+- 构建同步组件的基础工具 
+
+park开头的方法用于阻塞。unpark(Thread thread)类方法，用于唤醒。
+
+### AQS使用方式和其中的设计模式
+
+继承，模板方法设计模式，Lock接口面向的是锁的使用者，AQS面向的是锁的实现者，
+
+模板方法：
+- 独占式获取：accquire、acquireInterruptibly、tryAcquireNanos
+- 共享式获取：acquireShared、acquireSharedInterruptibly、tryAcquireSharedNanos
+- 独占式释放锁：release
+- 共享式释放锁：releaseShared
+
+需要子类覆盖的流程方法：
+- 独占式获取：tryAcquire
+- 独占式释放：tryRelease
+- 共享式获取：tryAcquireShared
+- 共享式释放：tryReleaseShared
+- 这个同步器是否处于独占模式：isHeldExclusively
+
+**同步状态state**：
+- getState:获取当前的同步状态
+- setState：设置当前同步状态
+- compareAndSetState 使用CAS设置状态，保证状态设置的原子性
+
+### AQS中的数据结构-节点和同步队列
+
+![](./img/AQS_struct.png)
+
+
+竞争失败的线程会打包成Node放到同步队列，Node可能的状态里：
+- CANCELLED：线程等待超时或者被中断了，需要从队列中移走
+- SIGNAL：后续的节点等待状态，当前节点完成工作释放资源后，通知后面的节点去运行
+- CONDITION：当前节点处于等待队列
+- PROPAGATE：共享，表示状态要往后面的节点传播
+- 0，表示初始状态
+
+### 节点在同步队列中的增加和移出
+
+#### 节点加入到同步队列
+
+![](./img/AQS_queue_in.png)
+
+#### 首节点的变化
+
+![](./img/AQS_queue_out.png)
+
+### 独占式同步状态获取与释放
+
+![](./img/AQS_Exclusive.png)
+
+## 4.3 Condition分析
+
+### 一个Condition包含一个等待队列
+
+![](./img/Condition_struct.png)
+
+### 同步队列与等待队列
+
+![](./img/Condition_queue.png)
+
+### await方法
+
+线程调用await时，说明他肯定获取了锁。
+
+![](./img/Condition_await.png)
+
+### signal方法
+
+ - 调用signal时，尝试竞争锁，如果没抢到就放到同步队列的尾部。如果调用signalAll，就会唤醒所有Condition队列中的线程，但是只有一个线程能获得锁，所以剩下的被唤醒的线程需要被移动到同步队列中（无用功）。
+ - syncronized中，有类似的同步队列和Condition队列，但是Condition队列只有一个。所以在notify时，你不确定Condition队列的首节点不一定是你想要的线程，所以必须得notifyAll。
+ - ReentrantLock可以有多个Condition队列 -> 可通过设定多个特定的Condition队列，去保证signal唤醒的都是自己想要的线程，所以不需要signalAll。
+
+![](./img/Condition_signal.png)
+
+## 4.4 回顾ReentrantLock和ReentrantReadWriteLock的实现
+
+### ReentrantLock
+
+- 锁的可重入：tryAcquire时判断请求锁的人是不是现在锁的拥有者，如果是就累加state，tryRelease同理，同一线程加锁几次就需要释放几次。
+- 公平锁：tryAcquire一定要判定一下有没有前驱节点，如果有就不会尝试拿锁。
+- 非公平锁：tryAcquire中首先尝试看能不能直接获取锁。
+
+### ReentrantReadWriteLock
+
+- state管理：
+	- 高16位：当前有多少线程获取了读锁，HoldCounter记录每一个读锁获得几次
+	- 低16位：记录写锁（重入）
+- 写锁可以降级为读锁，读锁不可以上升为读锁。
+
+
+# 5. 并发容器
+
+## 5.1 ConcurrentHashMap
+
+**Hashmap多线程会导致HashMap的Entry链表形成环形数据结构，原因是两个线程同时refresh，一个已经扩容完成，另一才刚开始扩容...**。一旦形成环形数据结构，Entry的next节点永远不为空，就会产生死循环获取Entry。
+
+HashTable使用synchronized来保证线程安全，**但在线程竞争激烈的情况下HashTable的效率非常低下**。因为当一个线程访问HashTable的同步方法，其他线程也访问HashTable的同步方法时，会进入阻塞或轮询状态。如线程1使用put进行元素添加，线程2不但不能使用put方法添加元素，也不能使用get方法来获取元素，所以竞争越激烈效率越低。
+
+**相关文章**
+
+- [HashMap的死循环](https://juejin.im/post/5a66a08d5188253dc3321da0)
+
+### 预备知识
+
+#### Hash
+
+散列，哈希：把任意长度的输入通过一种算法（散列），变换成为固定长度的输出，这个输出值就是散列值。属于压缩映射，容易产生哈希冲突。Hash算法有直接取余法等。
+产生哈希冲突时解决办法：开放寻址；2、再散列；3、链地址法（相同hash值的元素用链表串起来）。
+
+ConcurrentHashMap在发生hash冲突时采用了链地址法。MD4,MD5,SHA属于hash算法，又称摘要算法。
+
+### 位运算
+
+int类型的位：
+
+```
+高位                  低位
+31 30 29 ... 5 4 3 2 1 0
+0  0  0  ... 1 0 1 0 0 0
+```
+
+2的0次方 = 1，2的1次方=2...以此类推，以上表格代表数字（2的5次方+2的3次方）=40。由上面的表格可以看出，数字类型在数字渐渐变大时，是由低位慢慢向高位扩展的。Java实际保存int型时，正数：第31位=0，负数：第31位=1。
+
+常用位运算有：
+```
+- 位与  &  (1&1=1 	1&0=0	 0&0=0)
+- 位或  |   (1|1=1		 1|0=1 	0|0=0)
+- 位非  ~  （ ~1=0 	 ~0=1）
+- 位异或  ^   (1^1=0	 1^0=1	 0^0=0) 
+- <<有符号左移     >>有符号的右移    >>>无符号右移  例如：8 << 2 = 32	8>>2 = 2
+- 取模的操作 a % (Math.pow(2,n)) 等价于 a & ( Math.pow(2,n)-1)
+```
+位运算适用：权限控制，物品的属性非常多时的保存
+
+
+## 5.2 JDK1.7中ConcurrentHashMap原理和实现
+
+![](./img/ConcurrentHashMap_1_7.png)
+
+ConcurrentHashMap是由Segment数组结构和HashEntry数组结构组成。Segment实际继承自可重入锁（ReentrantLock），在ConcurrentHashMap里扮演锁的角色；HashEntry则用于存储键值对数据。一个ConcurrentHashMap里包含一个Segment数组，每个Segment里包含一个HashEntry数组，我们称之为table，每个HashEntry是一个链表结构的元素。
 
 
 
+### ConcurrentHashMap实现原理是怎么样的? ConcurrentHashMap如何在保证高并发下线程安全的同时实现了性能提升？
+
+答：ConcurrentHashMap允许多个修改操作并发进行，其关键在于使用了**锁分离**技术。它使用了多个锁来控制对hash表的不同部分进行的修改。内部使用段(Segment)来表示这些不同的部分，每个段其实就是一个小的hash table，只要多个修改操作发生在不同的段上，它们就可以并发进行。
+
+### 初始化做了什么事？
+
+初始化有三个参数：
+- initialCapacity：初始容量大小 ，默认16。
+- loadFactor, 扩容因子，默认0.75，当一个Segment存储的元素数量大于initialCapacity* loadFactor时，该Segment会进行一次扩容。
+- concurrencyLevel 并发度，默认16。并发度可以理解为程序运行时能够同时更新ConccurentHashMap且不产生锁竞争的最大线程数，实际上就是ConcurrentHashMap中的分段锁个数，即Segment[]的数组长度。如果并发度设置的过小，会带来严重的锁竞争问题；如果并发度设置的过大，原本位于同一个Segment内的访问会扩散到不同的Segment中，CPU cache命中率会下降，从而引起程序性能下降。如果既要达到最可能的平均分配hashMap的value的在table的各个index，又要用二进制计算实现存取效率，就要要求容量必须为2的幂次方。
+
+**相关文章**
+
+- [关于hashMap的容量为什么是2的幂次方的最详细解析](https://blog.csdn.net/LLF_1241352445/article/details/81321991)
+
+>构造方法中部分代码解惑
+
+![](./img/1_7/ConcurrentHashMap_Code_1.png)
+保证Segment数组的大小，一定为2的幂，例如用户设置并发度为17，则实际Segment数组大小则为32
+
+![](./img/1_7/ConcurrentHashMap_Code_2.png)
+保证每个Segment中tabel数组的大小，一定为2的幂，初始化的三个参数取默认值时，table数组大小为2
+
+![](./img/1_7/ConcurrentHashMap_Code_3.png)
+初始化Segment数组，并实际只填充Segment数组的第0个元素。
+
+![](./img/1_7/ConcurrentHashMap_Code_4.png)
+用于定位元素所在segment。segmentShift表示偏移位数，通过前面的int类型的位的描述我们可以得知，int类型的数字在变大的过程中，低位总是比高位先填满的，为保证元素在segment级别分布的尽量均匀，计算元素所在segment时，总是取hash值的高位进行计算。segmentMask作用就是为了利用位运算中取模的操作：a % (Math.pow(2,n)) 等价于 a & (Math.pow(2,n)-1)
+
+### 在get和put操作中，是如何快速定位元素放在哪个位置的？
+
+对于某个元素而言，一定是放在某个segment元素的某个table元素中的，所以在定位上，
+定位segment：取得key的hashcode值进行一次再散列（通过Wang/Jenkins算法），拿到再散列值后，以再散列值的高位进行取模得到当前元素在哪个segment上。这是为了保证hash的结果是相对均匀的。
+
+![](./img/1_7/ConcurrentHashMap_get_put_1.png)
+![](./img/1_7/ConcurrentHashMap_get_put_2.png)
+
+定位table：同样是取得key的再散列值以后，用再散列值的全部和table的长度进行取模，得到当前元素在table的哪个元素上。
+
+![](./img/1_7/ConcurrentHashMap_get_put_3.png)
+
+### get()
+
+定位segment和定位table后，依次扫描这个table元素下的的链表，要么找到元素，要么返回null。
+
+**在高并发下的情况下如何保证取得的元素是最新的？**用于存储键值对数据的HashEntry，在设计上它的成员变量value等都是volatile类型的，这样就保证别的线程对value值的修改，get方法可以马上看到。
+
+![](./img/1_7/ConcurrentHashMap_get_1.png)
+
+### put()
+
+- 1. 首先定位segment，当这个segment在map初始化后，还为null，由ensureSegment方法负责填充这个segment。
+- 2. 对Segment 加锁
+	![](./img/1_7/ConcurrentHashMap_put_1.png)
+- 3. 定位所在的table元素，并扫描table下的链表，找到时：
+	![](./img/1_7/ConcurrentHashMap_put_2.png)
+	没有找到时：
+	![](./img/1_7/ConcurrentHashMap_put_3.png)
+
+### 扩容操作
+
+Segment 不扩容，扩容下面的table数组，每次都是将数组翻倍
+
+![](./img/1_7/ConcurrentHashMap_resize_1.png)
+
+带来的好处
+
+假设原来table长度为4，那么元素在table中的分布是这样的：
+
+|   Hash值  |  15 | 23 | 34  | 56  | 77  |
+| ------------ | ------------ | ------------ | ------------ | ------------ | ------------ |
+| 在table中下标  | 3 = 15%4  | 3 = 23%4  | 2 = 34%4  | 0 = 56%4  | 1 = 77%4  |
+
+扩容后table长度变为8，那么元素在table中的分布变成：
+
+|   Hash值  | 56  |   |  34 |   |   | 77  |   | 15,23  |
+| ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ |
+| 下标 | 0  |  1 | 2  | 3  | 4  | 5  | 6  | 7  |
+
+可以看见 hash值为34和56的下标保持不变，而15,23,77的下标都是在原来下标的基础上+4即可，可以快速定位和减少重排次数。
 
 
+### size方法
 
+size的时候进行两次不加锁的统计，两次一致直接返回结果，不一致，重新加锁再次统计
+
+### 弱一致性
+
+get方法和containsKey方法都是通过对链表遍历判断是否存在key相同的节点以及获得该节点的value（没又实用锁）。但由于遍历过程中其他线程可能对链表结构做了调整，因此get和containsKey返回的可能是过时的数据，这一点是ConcurrentHashMap在弱一致性上的体现。
+
+**相关文章**
+
+- [ConcurrentHashMap是弱一致性分析](https://blog.csdn.net/wzq6578702/article/details/50908836)
+
+## 5.3 JDK1.8中ConcurrentHashMap原理和实现
+
+### 与1.7相比的重大变化
+- 1. 取消了segment数组，直接用table保存数据，锁的粒度更小，减少并发冲突的概率。
+- 2. 存储数据时采用了链表+红黑树的形式，纯链表的形式时间复杂度为O(n)，红黑树则为O（logn），性能提升很大。什么时候链表转红黑树？当key值相等的元素形成的链表中元素个数超过8个的时候。
+
+### 主要数据结构和关键变量
+
+Node类存放实际的key和value值。sizeCtl：
+- 负数：表示进行初始化或者扩容,-1表示正在初始化，-N，表示有N-1个线程正在进行扩容
+- 正数：0 表示还没有被初始化，>0的数，初始化或者是下一次进行扩容的阈值
+- TreeNode 用在红黑树，表示树的节点, TreeBin是实际放在table数组中的，代表了这个红黑树的根。
+
+### 初始化做了什么事？
+
+只是给成员变量赋值，put时进行实际数组的填充
+
+### 在get和put操作中，是如何快速定位元素放在哪个位置的？
+
+![](./img/ConcurrentHashMap_1_8_put_get_1.png)
+
+![](./img/ConcurrentHashMap_1_8_put_get_2.png)
+
+### get（）方法
+
+![](./img/ConcurrentHashMap_1_8_get_1.png)
+
+### put()方法
+
+数组的实际初始化
+
+![](./img/ConcurrentHashMap_1_8_put_1.png)
+
+![](./img/ConcurrentHashMap_1_8_put_2.png)
+
+![](./img/ConcurrentHashMap_1_8_put_3.png)
+
+![](./img/ConcurrentHashMap_1_8_put_4.png)
+
+### 扩容操作
+transfer()方法进行实际的扩容操作，table大小也是翻倍的形式，有一个并发扩容的机制。
+
+### size方法
+估计的大概数量，不是精确数量
+
+### 一致性
+弱一致
 
 
 

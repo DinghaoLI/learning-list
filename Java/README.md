@@ -22,4 +22,6 @@
 ### 4. Java相关知识点、面试问题与相关文章
 
 
-### [Java值传递与引用传递](https://juejin.im/post/5bce68226fb9a05ce46a0476)
+#### [Java值传递与引用传递](https://juejin.im/post/5bce68226fb9a05ce46a0476)
+
+#### [为什么Java内部类要设计成静态和非静态两种？](https://www.zhihu.com/question/28197253)
