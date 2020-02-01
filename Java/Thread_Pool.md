@@ -42,6 +42,7 @@ ThreadPoolExecutor，jdk所有线程池实现的父类
 ## 关闭线程池
 
 shutdown()和shutdownNow()：
+
 - shutdownNow()：设置线程池的状态，还会尝试停止正在运行或者暂停任务的线程
 - shutdown()：设置线程池的状态，只会中断所有没有执行任务的线程
 
@@ -67,16 +68,19 @@ shutdown()和shutdownNow()：
 ### FixedThreadPool
 
 创建固定线程数量线程池，适用于负载较重的服务器，使用了无界队列 => OOM风险
+
 - corePoolSize == maximumPoolSize
 
 ### SingleThreadExecutor
 
 创建单个线程，需要顺序保证执行任务，不会有多个线程活动，使用了无界队列
+
 - corePoolSize == maximumPoolSize == 1
 
 ### CachedThreadPool
 
 会根据需要来创建新线程的，执行很多短期异步任务的程序，使用了SynchronousQueue
+
 - corePoolSize == 0
 - maximumPoolSize == Integer.MAX_VALUE
 - 任何线程空闲超过60秒就销毁，如果创建线程过多，机器会crash
@@ -102,6 +106,7 @@ return new DelegatedScheduledExecutorService
 可以包含多个线程的，线程执行周期任务，适度控制后台线程数量的时候。
 
 方法说明：
+
 - schedule：只执行一次，任务还可以延时执行
 - scheduleAtFixedRate：提交固定时间间隔的任务（上个任务的起始时间和下个任务的起始时间的间隔是固定的）
 - scheduleWithFixedDelay：提交固定延时间隔执行的任务（上个任务的和结束时间下一个任务的开始之间的间隔是固定的）
@@ -130,16 +135,16 @@ scheduleAtFixedRate任务超时：
 
 建议在提交给ScheduledThreadPoolExecutor的任务要住catch异常。抛出异常后下个周期不会执行
 
-## Executor框架
+# 3. Executor框架
 
 ![](./img/Executor_1.png)
 ![](./img/Executor_2.png)
 
 一般来锁使用ThreadPoolExecutor会多一些，因为生产环境几乎不用无界队列且需要自己实现RejectedExecutionHandler。
 
-## 了解CompletionService
+# 4. 了解CompletionService
 
-
+目的：先去处理线程池中已经完成工作的的线程。
 
 
 
