@@ -561,6 +561,11 @@ transfer()方法进行实际的扩容操作，table大小也是翻倍的形式�
 
 ### 弱一致
 
+### 内存利润率低（经验值）
+
+- HashMap的内存利用率一般在20%到40%，ConcurrentHashMap又是HashMap的十分之一到四分之一
+- ConcurrentLinkedHashMap Google：ConcurrentHashMap的封装，预设容量，使用LRU更新内存
+
 ## 5.4 ConcurrentSkipListMap跳表 和 ConcurrentSkipListSet
 
 ![](./img/SkipList.png)
