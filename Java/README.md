@@ -2,7 +2,17 @@
 
 ## 知识点
 
-[并发编程、多线程](https://github.com/DinghaoLI/learning-list/blob/master/Java/Thread_Note.md)
+### 并发编程
+
+[并发编程、多线程基础](https://github.com/DinghaoLI/learning-list/blob/master/Java/Thread/Thread_Note.md)
+
+[线程池](https://github.com/DinghaoLI/learning-list/blob/master/Java/Thread/Thread_Pool.md)
+
+[线程安全](https://github.com/DinghaoLI/learning-list/blob/master/Java/Thread/Thread_Safe.md)
+
+[并发性能优化](https://github.com/DinghaoLI/learning-list/blob/master/Java/Thread/Thread_Opti.md)
+
+[并发编程与JMM](https://github.com/DinghaoLI/learning-list/blob/master/Java/Thread/Thread_JMM.md)
 
 
 ## 其他
