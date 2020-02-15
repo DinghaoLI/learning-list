@@ -300,43 +300,131 @@ Mybatis前身是iBatis,其源于“Internet”和“ibatis”的组合，本质�
 <!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
 <configuration>
 
-	<properties resource="db.properties" />
-
+	<!-- 参数设置 -->
 	<settings>
-		
-		
-		<setting name="mapUnderscoreToCamelCase" value="true" />
-		
-		
-	
+		<!-- 这个配置使全局的映射器启用或禁用缓存 -->
+		<setting name="cacheEnabled" value="true" />
+		<!-- 全局启用或禁用延迟加载。当禁用时，所有关联对象都会即时加载 -->
+		<setting name="lazyLoadingEnabled" value="true" />
+		<!-- 当启用时，有延迟加载属性的对象在被调用时将会完全加载任意属性。否则，每种属性将会按需要加载 -->
+		<setting name="aggressiveLazyLoading" value="true" />
+		<!-- 允许或不允许多种结果集从一个单独的语句中返回（需要适合的驱动） -->
+		<setting name="multipleResultSetsEnabled" value="true" />
+		<!-- 使用列标签代替列名。不同的驱动在这方便表现不同。参考驱动文档或充分测试两种方法来决定所使用的驱动 -->
+		<setting name="useColumnLabel" value="true" />
+		<!-- 允许JDBC支持生成的键。需要适合的驱动。如果设置为true则这个设置强制生成的键被使用，尽管一些驱动拒绝兼容但仍然有效（比如Derby） -->
+		<setting name="useGeneratedKeys" value="true" />
+		<!-- 指定MyBatis如何自动映射列到字段/属性。PARTIAL只会自动映射简单，没有嵌套的结果。FULL会自动映射任意复杂的结果（嵌套的或其他情况） -->
+		<setting name="autoMappingBehavior" value="PARTIAL" />
+		<!--当检测出未知列（或未知属性）时，如何处理，默认情况下没有任何提示，这在测试的时候很不方便，不容易找到错误。 NONE : 不做任何处理 
+			(默认值) WARNING : 警告日志形式的详细信息 FAILING : 映射失败，抛出异常和详细信息 -->
+		<setting name="autoMappingUnknownColumnBehavior" value="WARNING" />
+		<!-- 配置默认的执行器。SIMPLE执行器没有什么特别之处。REUSE执行器重用预处理语句。BATCH执行器重用语句和批量更新 -->
+		<setting name="defaultExecutorType" value="SIMPLE" />
+		<!-- 设置超时时间，它决定驱动等待一个数据库响应的时间 -->
+		<setting name="defaultStatementTimeout" value="25000" />
+		<!--设置查询返回值数量，可以被查询数值覆盖 -->
+		<setting name="defaultFetchSize" value="100" />
+		<!-- 允许在嵌套语句中使用分页 -->
+		<setting name="safeRowBoundsEnabled" value="false" />
+		<!--是否开启自动驼峰命名规则（camel case）映射，即从经典数据库列名 A_COLUMN 到经典 Java 属性名 aColumn 
+			的类似映射。 -->
+		<setting name="mapUnderscoreToCamelCase" value="false" />
+		<!--MyBatis 利用本地缓存机制（Local Cache）防止循环引用（circular references）和加速重复嵌套查询。 
+			默认值为 SESSION，这种情况下会缓存一个会话中执行的所有查询。 若设置值为 STATEMENT，本地会话仅用在语句执行上，对相同 SqlSession 
+			的不同调用将不会共享数据。 -->
+		<setting name="localCacheScope" value="SESSION" />
+		<!-- 当没有为参数提供特定的 JDBC 类型时，为空值指定 JDBC 类型。 某些驱动需要指定列的 JDBC 类型，多数情况直接用一般类型即可，比如 
+			NULL、VARCHAR OTHER。 -->
+		<setting name="jdbcTypeForNull" value="OTHER" />
+		<!-- 指定哪个对象的方法触发一次延迟加载。 -->
+		<setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString" />
 	</settings>
 
+	<!-- 别名定义 -->
+	<typeAliases>
+		<typeAlias alias="pageAccessURL" type="com.lgm.mybatis.model.PageAccessURL" />
+	</typeAliases>
+
+	<!--自定义类型处理器 -->
+	<typeHandlers>
+		<!-- <typeHandler handler="com.xhm.util.BooleanTypeHandlder" /> -->
+		<!--扫描整个包下的自定义类型处理器 -->
+		<package name="com.xhm.util" />
+	</typeHandlers>
+
+	<!--plugins插件之 分页拦截器 -->
+	<plugins>
+		<plugin interceptor="com.xhm.util.PageInterceptor"></plugin>
+	</plugins>
 
 	<!--配置environment环境 -->
 	<environments default="development">
 		<!-- 环境配置1，每个SqlSessionFactory对应一个环境 -->
-		<environment id="development">
+		<environment id="development1">
+			<!-- 事务配置 type= JDBC、MANAGED 1.JDBC:这个配置直接简单使用了JDBC的提交和回滚设置。它依赖于从数据源得到的连接来管理事务范围。 
+				2.MANAGED:这个配置几乎没做什么。它从来不提交或回滚一个连接。而它会让容器来管理事务的整个生命周期（比如Spring或JEE应用服务器的上下文）。 
+				默认情况下它会关闭连接。然而一些容器并不希望这样，因此如果你需要从连接中停止它，将closeConnection属性设置为false -->
 			<transactionManager type="JDBC" />
+			<!-- <transactionManager type="MANAGED"> <property name="closeConnection" 
+				value="false"/> </transactionManager> -->
+			<!-- 数据源类型：type = UNPOOLED、POOLED、JNDI 1.UNPOOLED：这个数据源的实现是每次被请求时简单打开和关闭连接。它有一点慢，这是对简单应用程序的一个很好的选择，因为它不需要及时的可用连接。 
+				不同的数据库对这个的表现也是不一样的，所以对某些数据库来说配置数据源并不重要，这个配置也是闲置的 2.POOLED：这是JDBC连接对象的数据源连接池的实现，用来避免创建新的连接实例时必要的初始连接和认证时间。 
+				这是一种当前Web应用程序用来快速响应请求很流行的方法。 3.JNDI：这个数据源的实现是为了使用如Spring或应用服务器这类的容器，容器可以集中或在外部配置数据源，然后放置一个JNDI上下文的引用 -->
 			<dataSource type="UNPOOLED">
-				<property name="driver" value="${jdbc_driver}" />
-				<property name="url" value="${jdbc_url}" />
-				<property name="username" value="${jdbc_username}" />
-				<property name="password" value="${jdbc_password}" />
+				<property name="driver" value="com.mysql.jdbc.Driver" />
+				<property name="url" value="jdbc:mysql://localhost:3306/xhm" />
+				<property name="username" value="root" />
+				<property name="password" value="root" />
+				<!-- 默认连接事务隔离级别 <property name="defaultTransactionIsolationLevel" value="" 
+					/> -->
 			</dataSource>
 		</environment>
 
+		<!-- 环境配置2 -->
+		<environment id="development2">
+			<transactionManager type="JDBC" />
+			<dataSource type="POOLED">
+				<property name="driver" value="com.mysql.jdbc.Driver" />
+				<property name="url" value="jdbc:mysql://localhost:3306/xhm" />
+				<property name="username" value="root" />
+				<property name="password" value="root" />
+				<!-- 在任意时间存在的活动（也就是正在使用）连接的数量 -->
+				<property name="poolMaximumActiveConnections" value="10" />
+				<!-- 任意时间存在的空闲连接数 -->
+				<property name="poolMaximumIdleConnections" value="5" />
+				<!-- 在被强制返回之前，池中连接被检查的时间 -->
+				<property name="poolMaximumCheckoutTime" value="20000" />
+				<!-- 这是给连接池一个打印日志状态机会的低层次设置，还有重新尝试获得连接，这些情况下往往需要很长时间（为了避免连接池没有配置时静默失败） -->
+				<property name="poolTimeToWait" value="20000" />
+				<!-- 发送到数据的侦测查询，用来验证连接是否正常工作，并且准备接受请求。 -->
+				<property name="poolPingQuery" value="NO PING QUERY SET" />
+				<!-- 这是开启或禁用侦测查询。如果开启，你必须用一个合法的SQL语句（最好是很快速的）设置poolPingQuery属性 -->
+				<property name="poolPingEnabled" value="false" />
+				<!-- 这是用来配置poolPingQuery多次时间被用一次。这可以被设置匹配标准的数据库连接超时时间，来避免不必要的侦测 -->
+				<property name="poolPingConnectionsNotUsedFor" value="0" />
+			</dataSource>
+		</environment>
+
+		<!-- 环境配置3 -->
+		<environment id="development3">
+			<transactionManager type="JDBC" />
+			<dataSource type="JNDI">
+				<property name="data_source" value="java:comp/env/jndi/mybatis" />
+				<property name="env.encoding" value="UTF8" />
+				<!-- <property name="initial_context" value=""/> <property name="env.encoding" 
+					value="UTF8"/> -->
+			</dataSource>
+		</environment>
 	</environments>
 
 	<!-- 映射文件，mapper的配置文件 -->
-<!-- 	<mappers>
-		直接映射到相应的mapper文件
-		<mapper resource="sqlmapper/TUserMapper.xml" />
-	</mappers> -->
-
 	<mappers>
-		<mapper class="com.enjoylearning.mybatis.mapper.TUserMapper" />
+		<!--直接映射到相应的mapper文件 -->
+		<mapper resource="com/xhm/mapper/UserMapper.xml" />
+		<!--扫描包路径下所有xxMapper.xml文件 -->
+		<package name="com.xhm.mapper" />
 	</mappers>
-
 
 </configuration>  
 ```
@@ -497,13 +585,190 @@ SQl相关：
 
 - statementType：STATEMENT，PREPARED 或 CALLABLE 的一个。这会让 MyBatis 分别使用 Statement，PreparedStatement 或 CallableStatement，默认值:PREPARED。
 
-- **useGeneratedKeys**：(仅对 insert 和 update 有用)这会令 MyBatis 使用 JDBC 的 getGeneratedKeys 方法来取出由数据库内部生成的 主键(比如:像 MySQL 和 SQL Server 这样的关系数据库管理系统的自动递增字段)，默认值:false。
+- **useGeneratedKeys**：(仅对 insert 和 update 有用)这会令 MyBatis 使用 JDBC 的 getGeneratedKeys 方法来取出由数据库内部生成的主键(比如:像 MySQL 和 SQL Server 这样的关系数据库管理系统的**自动递增字段**)，默认值:false。
 
 - **keyProperty**：(仅对 insert 和 update 有用)唯一标记一个属性，MyBatis 会通过 getGeneratedKeys 的返回值或者通过 insert 语句的 selectKey 子元素设置它的键值，默认:unset。如果希望得到多个生成的列，也可以是逗号分隔的属性名称 列表。
 
 - keyColumn：(仅对 insert 和 update 有用)通过生成的键值设置表中的列名，这个设置仅在某些数据库(像 PostgreSQL)是必 须的，当主键列不是表中的第一列的时候需要设置。如果希望得到多个生成的列，也可以是逗号分隔的属性名称列表。
 
 - databaseId：如果配置了 databaseIdProvider，MyBatis 会加载所有的不带 databaseId 或匹配当前 databaseId 的语句，如果带或者不带的语句都有，则不带的会被忽略。
+
+
+**注意：**例如对id使用useGeneratedKeys和keyProperty时，mybatis会用根据历史所有插入数据的最大id+1，而不是当前表最大id+1
+
+##### selectKey元素
+
+- keyProperty：selectKey语句结果应该被设置的目标属性。如果希望得到多个生成的列，也可以是逗号分隔的属性名称列表。
+
+- keyColumn：匹配属性的返回结果集中的列名称。如果希望得到多个生成的列，也可以是逗号分隔的属性名称列表。
+
+- resultType：结果的类型。MyBatis通常可以推算出来，但是为了更加确定写上也不会有什么问题。MyBatis 允许任何简单类型用作主键的类型，包括字符串。如果希望作用于多个生成的列，则可以使用一个包含期望属性的 Object 或一个 Map。
+
+- order这可以被设置为 BEFORE 或 AFTER。如果设置为 BEFORE，那么它会首先选择主键，设置 keyProperty 然后执行插 入语句。如果设置为 AFTER，那么先执行插入语句，然后是 selectKey 元素
+
+- 这和像Oracle的数据库相似，在插入语句内部可能有嵌入索引调用。statementType与前面相同，MyBatis 支持 STATEMENT，PREPARED和CALLABLE语句的映射类型，分别代表PreparedStatement和CallableStatement类型。
+
+
+##### sql元素和参数
+
+- sql元素：用来定义可重用的 SQL 代码段，可以包含在其他语句中;
+
+- 参数：向sql语句中传递的可变参数
+	- 预编译#{}：将传入的数据都当成一个字符串，**会对自动传入的数据加一个单引号（预编译）**，能够很大程度防止
+sql注入;
+	- 传值${}：传入的数据直接显示生成在sql中，无法防止sql注入; 
+	- 表名、选取的列是动态的，order by和in操作， 可以考虑使用${}
+
+##### 注解方式配置（不推荐）
+
+注解方式就是将SQL语句直接写在接口上，对于需求比较简单的系统，效率较高。缺点在于，每次修改sql语句 都要编译代码，对于复杂的sql语句可编辑性和可读性都差，一般不建议使用这种配置方式：@Select、@Results、@Insert、@Update、@Delete
+
+
+# 4. 动态SQL
+
+## 4.1 动态SQL元素
+
+![](./img/dynamic_sql_1.png)
+
+### Examples
+
+```xml
+	<select id="selectIfandWhereOper" resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from t_user a
+		<where>
+			<if test="email != null and email != ''">
+			  	and a.email like CONCAT('%', #{email}, '%') 
+			</if>
+			<if test="sex != null ">
+				and a.sex = #{sex}
+			</if>
+		</where>
+	</select>
+
+	<update id="updateIfAndSetOper" parameterType="TUser">
+		update t_user
+		  <set> 
+			<if test="userName != null">
+				user_name = #{userName,jdbcType=VARCHAR},
+			</if>
+			<if test="realName != null">
+				real_name = #{realName,jdbcType=VARCHAR},
+			</if>
+			<if test="sex != null">
+				sex = #{sex,jdbcType=TINYINT},
+			</if>
+			<if test="mobile != null">
+				mobile = #{mobile,jdbcType=VARCHAR},
+			</if>
+			<if test="email != null">
+				email = #{email,jdbcType=VARCHAR},
+			</if>
+			<if test="note != null">
+				note = #{note,jdbcType=VARCHAR},
+			</if>
+			<if test="positionId != null">
+				position_id = #{positionId,jdbcType=INTEGER},
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+
+	<insert id="insertSelective" parameterType="TUser">
+		insert into t_user
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				id,
+			</if>
+			<if test="userName != null">
+				user_name,
+			</if>
+			<if test="realName != null">
+				real_name,
+			</if>
+			<if test="sex != null">
+				sex,
+			</if>
+			<if test="mobile != null">
+				mobile,
+			</if>
+			<if test="email != null">
+				email,
+			</if>
+			<if test="note != null">
+				note,
+			</if>
+			<if test="positionId != null">
+				position_id,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="id != null">
+				#{id,jdbcType=INTEGER},
+			</if>
+			<if test="userName != null">
+				#{userName,jdbcType=VARCHAR},
+			</if>
+			<if test="realName != null">
+				#{realName,jdbcType=VARCHAR},
+			</if>
+			<if test="sex != null">
+				#{sex,jdbcType=TINYINT},
+			</if>
+			<if test="mobile != null">
+				#{mobile,jdbcType=VARCHAR},
+			</if>
+			<if test="email != null">
+				#{email,jdbcType=VARCHAR},
+			</if>
+			<if test="note != null">
+				#{note,jdbcType=VARCHAR},
+			</if>
+			<if test="positionId != null">
+				#{positionId,jdbcType=INTEGER},
+			</if>
+		</trim>
+	</insert>
+
+	<select id="selectForeach4In" resultMap="BaseResultMap">
+		select
+		<include refid="Base_Column_List" />
+		from t_user a
+		where a.user_name in 
+		<foreach collection="array" open="(" close=")" item="userName" index="i" separator=",">
+			#{userName}
+		</foreach>	
+	</select>
+	
+	<insert id="insertForeach4Batch">
+		insert into t_user (user_name, real_name,
+		sex, mobile,email,note, position_id) 
+		values
+		<foreach collection="list" separator="," item="user">
+			(
+			#{user.userName,jdbcType=VARCHAR},
+			#{user.realName,jdbcType=VARCHAR},
+			#{user.sex,jdbcType=TINYINT}, 
+			#{user.mobile,jdbcType=VARCHAR},
+			#{user.email,jdbcType=VARCHAR},
+			#{user.note,jdbcType=VARCHAR},
+			#{user.positionId,jdbcType=INTEGER}
+			)
+		</foreach>
+	</insert>
+```
+
+## 4.2 批量操作
+
+- 通过foreach动态拼装SQL语句
+- 使用BATCH类型的excutor
+
+
+
+
+
+
 
 
 
