@@ -411,7 +411,7 @@ AnnotationAwareAspectJAutoProxyCreator类关系如下，继承关系：
  			- 1）、invokeAwareMethods()：处理Aware接口的方法回调
  			- 2）、applyBeanPostProcessorsBeforeInitialization()：应用后置处理器的postProcessBeforeInitialization（）
  			- 3）、invokeInitMethods()；执行自定义的初始化方法
- 			- 4）、applyBeanPostProcessorsAfterInitialization()；执行后置处理器的postProcessAfterInitialization（）；
+ 			- 4）、applyBeanPostProcessorsAfterInitialization()；执行后置处理器的postProcessAfterInitialization（）
  		- 4）、BeanPostProcessor(AnnotationAwareAspectJAutoProxyCreator)创建成功；--》aspectJAdvisorsBuilder
  	- 7）、把BeanPostProcessor注册到BeanFactory中；
  		beanFactory.addBeanPostProcessor(postProcessor);
@@ -436,11 +436,11 @@ AnnotationAwareAspectJAutoProxyCreator类关系如下，继承关系：
   					【BeanPostProcessor是在Bean对象创建完成初始化前后调用的】
   					【InstantiationAwareBeanPostProcessor是在创建Bean实例之前先尝试用后置处理器返回对象的】
   			- 2.2.1）、resolveBeforeInstantiation(beanName, mbdToUse);解析BeforeInstantiation,如果能返回代理对象就使用，如果不能就继续,后置处理器先尝试返回对象；
-  			bean = applyBeanPostProcessorsBeforeInstantiation（）：
+  			bean = applyBeanPostProcessorsBeforeInstantiation（）：// 获取TargetSourceBean，一般来说是null
   			拿到所有后置处理器，如果是InstantiationAwareBeanPostProcessor;
   			就执行postProcessBeforeInstantiation
   			if (bean != null) {
-					bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
+					bean = applyBeanPostProcessorsAfterInitialization(bean, beanName); //拿到所有通知方法 -> 为了创建增强的动态代理对象
 			}
   
   			- 2.2.2）、doCreateBean(beanName, mbdToUse, args);真正的去创建一个bean实例；和单实例bean创建流程一样；
@@ -484,9 +484,75 @@ InstantiationAwareBeanPostProcessor：
 
 更详细的内容请见仓库内的[springAOP核心组件分析.pdf](./springAOP核心组件分析.pdf)
 
+#### AnnotationAwareAspectJAutoProxyCreator如何拦截Bean创建
+
+```
+主要判断当前类是否需要增强, 如果需要增强, 则动态代理创建增强代理对象
+单实例caculator创建--->createBean()-->resolveBeforeInstantiation()-->
+applyBeanPostProcessorsBeforeInstantiation--->postProcessBeforeInstantiation()--->
+new Caculator()创建对象--->进入1701行:applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName)--->调用postProcessAfterInstantiation()--->
+调用getAdvicesAndAdvisorsForBean()获取当前bean的通知方法--->
+得到由CGLIB增强后的的caculator-->
+当执行目标方法时,CGLIB代理对象就会调用之前保存好的切面通知
+```
+
+#### AOP调用流程
+
+- 1. 获取拦截链--MethodInterceptor
+- 2. 链式调用通知方法
 
 
+```
+目标方法执行（caculator.div()方法执行切面拦截）；
+  		容器中保存了组件的代理对象（cglib增强后的对象），这个对象里面保存了详细信息（比如增强器，目标对象，xxx）；
+  		1）、CglibAopProxy.intercept();拦截目标方法的执行
+  		2）、根据ProxyFactory对象获取将要执行的目标方法拦截器链；
+  			List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
+  			1）、List<Object> interceptorList保存所有拦截器 5
+  				一个默认的ExposeInvocationInterceptor 和 4个增强器；
+  			2）、遍历所有的增强器，将其转为Interceptor；
+  				registry.getInterceptors(advisor);
+  			3）、将增强器转为List<MethodInterceptor>；
+  				如果是MethodInterceptor，直接加入到集合中
+  				如果不是，使用AdvisorAdapter将增强器转为MethodInterceptor；
+  				转换完成返回MethodInterceptor数组；
+  
+  		3）、如果没有拦截器链，直接执行目标方法;
+  			拦截器链（每一个通知方法又被包装为方法拦截器，利用MethodInterceptor机制）
+  		4）、如果有拦截器链，把需要执行的目标对象，目标方法，
+  			拦截器链等信息传入创建一个 CglibMethodInvocation 对象，
+  			并调用 Object retVal =  mi.proceed();
+  		5）、拦截器链的触发过程;
+  			1)、如果没有拦截器执行执行目标方法，或者拦截器的索引和拦截器数组-1大小一样（指定到了最后一个拦截器）执行目标方法；
+  			2)、链式获取每一个拦截器，拦截器执行invoke方法，每一个拦截器等待下一个拦截器执行完成返回以后再来执行；
+  				拦截器链的机制，保证通知方法与目标方法的执行顺序；
+  		
+  	总结：
+  		1）、  @EnableAspectJAutoProxy 开启AOP功能
+  		2）、 @EnableAspectJAutoProxy 会给容器中注册一个组件 AnnotationAwareAspectJAutoProxyCreator
+  		3）、AnnotationAwareAspectJAutoProxyCreator是一个后置处理器；
+  		4）、容器的创建流程：
+  			1）、registerBeanPostProcessors（）注册后置处理器；创建AnnotationAwareAspectJAutoProxyCreator对象
+  			2）、finishBeanFactoryInitialization（）初始化剩下的单实例bean
+  				1）、创建业务逻辑组件和切面组件
+  				2）、AnnotationAwareAspectJAutoProxyCreator拦截组件的创建过程
+  				3）、组件创建完之后，判断组件是否需要增强
+  					是：切面的通知方法，包装成增强器（Advisor）;给业务逻辑组件创建一个代理对象（cglib）；
+  		5）、执行目标方法：
+  			1）、代理对象执行目标方法
+  			2）、CglibAopProxy.intercept()；
+  				1）、得到目标方法的拦截器链（增强器包装成拦截器MethodInterceptor）
+  				2）、利用拦截器的链式机制，依次进入每一个拦截器进行执行；
+  				3）、效果：
+  					正常执行：前置通知-》目标方法-》后置通知-》返回通知
+  					出现异常：前置通知-》目标方法-》后置通知-》异常通知
+```
 
+拦截流程图如下：
+
+![](./img/AOP_call_1.png)
+
+这些不同的通知方法，按照左侧的顺序从上往下依次递归进入调用栈。最后在一层一层返回的时候，才调用相关功能，所以调用内容的结果是从下往上的，利用栈进行倒序。
 
 
 

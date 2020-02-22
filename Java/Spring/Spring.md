@@ -307,8 +307,35 @@ public class Cap5MainConfig {
 
 #### Tips：
 
-- FactoryBean：注册机制，可以把Java实例Bean通过FactoryBean注入到容器中
-- BeanFactory：从IOC容器获取实例化后的bean
+##### BeanFactory
+
+BeanFactory是一个接口，它是Spring中工厂的顶层规范，是SpringIoc容器的核心接口，它定义了getBean()、containsBean()等管理Bean的通用方法。Spring的容器都是它的具体实现如：
+
+- DefaultListableBeanFactory
+- XmlBeanFactory
+- ApplicationContext
+
+
+##### FactoryBean
+
+首先它是一个Bean，但又不仅仅是一个Bean。它是一个能生产或修饰对象生成的工厂Bean，类似于设计模式中的工厂模式和装饰器模式。它能在需要的时候生产一个对象，且不仅仅限于它自身，它能返回任何Bean的实例。
+
+```java
+public interface FactoryBean<T> {
+
+	@Nullable
+	T getObject() throws Exception;
+
+	@Nullable
+	Class<?> getObjectType();
+
+	default boolean isSingleton() {
+		return true;
+	}
+
+}
+
+```
 
 ```java
 package com.enjoy.cap5.config;
