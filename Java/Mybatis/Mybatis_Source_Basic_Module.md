@@ -1720,6 +1720,47 @@ public class Reflector {
   }
 
   // ...
+
+  private void addFields(Class<?> clazz) {
+    Field[] fields = clazz.getDeclaredFields();
+    for (Field field : fields) {
+      if (canControlMemberAccessible()) {
+        try {
+          field.setAccessible(true);
+        } catch (Exception e) {
+          // Ignored. This is only a final precaution, nothing we can do.
+        }
+      }
+      if (field.isAccessible()) {
+        if (!setMethods.containsKey(field.getName())) {
+          // issue #379 - removed the check for final because JDK 1.5 allows
+          // modification of final fields through reflection (JSR-133). (JGB)
+          // pr #16 - final static can only be set by the classloader
+          int modifiers = field.getModifiers();
+          if (!(Modifier.isFinal(modifiers) && Modifier.isStatic(modifiers))) {
+            addSetField(field);//这里给没有个set方法的属性，生成一个set方法
+          }
+        }
+        if (!getMethods.containsKey(field.getName())) {
+          addGetField(field);//这里给没有个get方法的属性，生成一个get方法
+        }
+      }
+    }
+    if (clazz.getSuperclass() != null) {
+      addFields(clazz.getSuperclass());
+    }
+  }
+
+   private void addSetField(Field field) {
+    if (isValidPropertyName(field.getName())) {
+      setMethods.put(field.getName(), new SetFieldInvoker(field));
+      Type fieldType = TypeParameterResolver.resolveFieldType(field, type);
+      setTypes.put(field.getName(), typeToClass(fieldType));
+    }
+  }
+
+  // ...
+
   
 }
 ```
