@@ -433,8 +433,8 @@ Recall from the previous section that only the cache for this particular namespa
 
 ### 4.2 集成配置最佳实践
 
-- 1. 准备spring项目一个
-- 2. 在pom文件中添加mybatis-spring的依赖
+- 1- 准备spring项目一个
+- 2- 在pom文件中添加mybatis-spring的依赖
 ```xml
 <dependency> 
 	<groupId>org.mybatis</groupId> 
@@ -443,9 +443,9 @@ Recall from the previous section that only the cache for this particular namespa
 </dependency>
 ```
 
-- 3. 配置SqlSessionFactoryBean
-- 4. 配置MapperScannerConfigurer 
-- 5. 配置事务
+- 3- 配置SqlSessionFactoryBean
+- 4- 配置MapperScannerConfigurer 
+- 5- 配置事务
 
 ### 4.3 SqlSessionFactoryBean
 
