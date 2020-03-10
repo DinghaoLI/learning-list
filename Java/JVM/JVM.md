@@ -1404,17 +1404,17 @@ Common ClassLoader作为Catalina ClassLoader和Shared ClassLoader的parent，而
 
 ## 方法调用详解
 
-![](./img/Method_Call_1.png)
-
 ### 解析
 
 调用目标在程序代码写好、编译器进行编译时就必须确定下来。这类方法的调用称为解析。
 
-在Java语言中符合“编译期可知，运行期不可变”这个要求的方法，主要包括静态方法和私有方法两大类，前者与类型直接关联，后者在外部不可被访问，这两种方法各自的特点决定了它们都不可能通过继承或别的方式重写其他版本，因此它们都适合在类加载阶段进行解析。
+在Java语言中符合“编译期可知，运行期不可变”这个要求的方法，主要包括静态方法和私有方法两大类（还有构造方法），前者与类型直接关联，后者在外部不可被访问，这两种方法各自的特点决定了它们都不可能通过继承或别的方式重写其他版本，因此它们都适合在类加载阶段进行解析。
+
 
 ### 静态分派
 
 多见于方法的重载。
+
 
 ![](./img/StaticType.png)
 
@@ -1424,15 +1424,69 @@ Common ClassLoader作为Catalina ClassLoader和Shared ClassLoader的parent，而
 
 ### 动态分派
 
+```java
+public class DynamicDispatch {
+	static abstract class Human{
+		protected abstract void sayHello();
+	}
+	
+	static class Man extends Human{
+		@Override
+		protected void sayHello() {
+			System.out.println("hello,gentleman！");
+		}	
+	}
+	
+	static class Woman extends Human{
+		@Override
+		protected void sayHello() {
+			System.out.println("hello,lady！");
+		}
+	}
+	
+	public static void main(String[]args){
+		Human h1 = new Man();
+		Human h2 = new Woman();
+		h1.sayHello();
+		h2.sayHello();
+	}
+}
+// output:
+// hello,gentleman！
+// hello,lady！
+```
+
+
 静态类型同样都是Human的两个变量man和woman在调用sayHello（）方法时执行了不同的行为，并且变量man在两次调用中执行了不同的方法。导致这个现象的原因很明显，是这两个变量的实际类型不同。
 
-在实现上，最常用的手段就是为类在方法区中建立一个虚方法表。虚方法表中存放着各个方法的实际入口地址。如果某个方法在子类中没有被重写，那子类的虚方法表里面的地址入口和父类相同方法的地址入口是一致的，都指向父类的实现入口。如果子类中重写了这个方法，子类方法表中的地址将会替换为指向子类实现版本的入口地址。PPT图中，Son重写了来自Father的全部方法，因此Son的方法表没有指向Father类型数据的箭头。但是Son和Father都没有重写来自Object的方法，所以它们的方法表中所有从Object继承来的方法都指向了Object的数据类型。
+![](./img/Method_Call_1.png)
 
+在实现上，最常用的手段就是为类在方法区中建立一个虚方法表（有虚拟机维护，不再方法区中）。虚方法表中存放着各个方法的实际入口地址（方法区中的某个地址）。如果某个方法在子类中没有被重写，那子类的虚方法表里面的地址入口和父类相同方法的地址入口是一致的，都指向父类的实现入口。如果子类中重写了这个方法，子类方法表中的地址将会替换为指向子类实现版本的入口地址。PPT图中，Son重写了来自Father的全部方法，因此Son的方法表没有指向Father类型数据的箭头。但是Son和Father都没有重写来自Object的方法，所以它们的方法表中所有从Object继承来的方法都指向了Object的数据类型。
+
+类似C++的虚表
 
 ## 基于栈的字节码解释执行引擎
 
+基于寄存器的指令集
 
-基于栈的指令集与基于寄存器的指令集
+```
+mov eax, 1
+add eax, 1
+```
+
+基于栈的指令集
+
+```
+iconst_1
+iconst_1
+iadd
+```
+
+基于寄存器的指令集，和硬件结合比较紧闭，速度会快，但是基于栈的指令集更容易跨平台。
+
+
+
+
 基于栈的解释器执行过程，分析下面这段代码在虚拟机中的执行情况
 
 ```java
@@ -1444,6 +1498,7 @@ public int calc(){
 }
 ```
 
+![](./img/bytecode_1.png)
 
 
 
